@@ -111,3 +111,24 @@ listeners:
             assert app.name_prefix == "yamlapp."
             assert len(app.listeners) == 1
             assert app.listeners[0].foo == 666
+
+    def test_filter_expression(self):
+        eventisc.init_default_app(listeners=[
+            {"kind": "test", "event_name": "myevent", "foo": 23,
+             "filter": {"kind": "expr", "expr": "event_data['fii'] > 10"}},
+        ])
+
+        app = eventisc.get_current_app()
+        assert len(app.listeners) == 1
+
+        assert isinstance(app.listeners[0], MyTestListener)
+        assert app.listeners[0].foo == 23
+
+        count = eventisc.trigger("myevent", {"fii": 34})
+        assert count == 1
+        app.listeners[0].mock.assert_called_once_with("myevent", {"fii": 34})
+        app.listeners[0].mock.reset_mock()
+
+        count = eventisc.trigger("myevent", {"fii": 9})
+        assert count == 0
+        app.listeners[0].mock.assert_not_called()

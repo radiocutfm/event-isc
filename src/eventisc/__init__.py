@@ -70,7 +70,8 @@ class Listener(ABC):
         listener_cls = cls.get(kind)
         if "event_name_regex" in listener_def:
             listener_def["event_name"] = re.compile(listener_def.pop("event_name_regex"))
-        # TODO: filter
+        if "filter" in listener_def:
+            listener_def["filter"] = Filter.from_dict(listener_def["filter"])
         return listener_cls(**listener_def)
 
     def __init__(self, event_name, filter=None):
@@ -93,6 +94,46 @@ class Listener(ABC):
     @abstractmethod
     def _do_notify(self, event_name, event_data):
         raise NotImplementedError
+
+
+class Filter(ABC):
+    _registry = {}
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if hasattr(cls, "kind"):
+            Filter._registry[cls.kind] = cls
+
+    @classmethod
+    def get(cls, kind):
+        return cls._registry[kind]
+
+    @classmethod
+    def from_dict(cls, filter_def):
+        filter_def = dict(filter_def)
+        kind = filter_def.pop("kind")
+        filter_cls = cls.get(kind)
+        return filter_cls(**filter_def)
+
+    @abstractmethod
+    def __call__(self, event_name, event_data):
+        raise NotImplementedError
+
+
+class ExprFilter(Filter):
+    kind = "expr"
+
+    def __init__(self, expr):
+        self.expr = compile(expr, __file__, "eval")
+
+    @property
+    def expr_globals(self):
+        import math
+        import datetime
+        return {"datetime": datetime, "math": math}
+
+    def __call__(self, event_name, event_data):
+        return bool(eval(self.expr, self.expr_globals, {"event_name": event_name, "event_data": event_data}))
 
 
 def read_config_file(config_file):
