@@ -20,12 +20,11 @@ env = Env()
 default_app = None
 
 
-def get_current_app():
-    global default_app
-
-    if default_app is None:
-        init_default_app()
-    return default_app
+def eval_globals():
+    """Global modules that might be used in expressions"""
+    import math
+    import datetime
+    return {"datetime": datetime, "math": math, "json": json}
 
 
 class EventApp:
@@ -95,6 +94,21 @@ class Listener(ABC):
     def _do_notify(self, event_name, event_data):
         raise NotImplementedError
 
+    @classmethod
+    def format(self, value, event_name, event_data):
+        """Formats a field that can be constant, proxy or format string of the event values"""
+        if not isinstance(value, str) or '{' not in value:
+            return value
+        context_dict = dict(event_name=event_name, event_data=event_data)
+        if value.startswith("{") and value.endswith("}") and '{' not in value[1:-1]:
+            # It's a simple value, {variable}, use eval to keep type
+            try:
+                expr = compile(value[1:-1], __file__, "eval")
+            except SyntaxError:
+                return value.format(**context_dict)
+            return eval(expr, eval_globals(), context_dict)
+        return value.format(**context_dict)
+
 
 class Filter(ABC):
     _registry = {}
@@ -126,14 +140,8 @@ class ExprFilter(Filter):
     def __init__(self, expr):
         self.expr = compile(expr, __file__, "eval")
 
-    @property
-    def expr_globals(self):
-        import math
-        import datetime
-        return {"datetime": datetime, "math": math}
-
     def __call__(self, event_name, event_data):
-        return bool(eval(self.expr, self.expr_globals, {"event_name": event_name, "event_data": event_data}))
+        return bool(eval(self.expr, eval_globals(), {"event_name": event_name, "event_data": event_data}))
 
 
 def read_config_file(config_file):
@@ -177,6 +185,14 @@ def create_app(name_prefix=None, listeners=None, config_file=None):
         name_prefix, listeners = read_config_file(config_file)
 
     return EventApp(name_prefix, listeners)
+
+
+def get_current_app():
+    global default_app
+
+    if default_app is None:
+        init_default_app()
+    return default_app
 
 
 def trigger(event_name, event_data):
