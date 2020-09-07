@@ -129,3 +129,22 @@ listeners:
         count = eventisc.trigger("myevent", {"fii": 9})
         assert count == 0
         app.listeners[0].mock.assert_not_called()
+
+    @mock.patch.dict(os.environ, {"EVENTISC_DRYRUN": "Y"})
+    def test_dry_run(self):
+        eventisc.init_default_app(listeners=[
+            {"kind": "test", "event_name": "myevent", "foo": 23},
+        ])
+
+        app = eventisc.get_current_app()
+        assert len(app.listeners) == 1
+
+        assert isinstance(app.listeners[0], MyTestListener)
+        assert app.listeners[0].foo == 23
+
+        with mock.patch.object(eventisc.logger, "info", wraps=eventisc.logger.info) as info_log:
+            count = eventisc.trigger("myevent", {"fii": 34})
+            assert count == 1
+            app.listeners[0].mock.assert_not_called()
+            info_log.assert_called_once_with('EVENTISC_DRYRUN=Y _do_notify(%s, %s)',
+                                             'myevent', {'fii': 34})

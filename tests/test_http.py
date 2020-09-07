@@ -3,7 +3,6 @@ from unittest import TestCase
 import json
 import responses
 import eventisc
-import eventisc.http_listener  # noqa
 
 
 class TestHTTPListenerApp(TestCase):
@@ -37,3 +36,28 @@ class TestHTTPListenerApp(TestCase):
             "bar": 3, "barcito": 43
         }
         assert request.headers["X-Foo"] == "sss"
+
+    @responses.activate
+    def test_auth_param(self):
+        app = eventisc.init_default_app(listeners=[
+            {
+                "event_name_regex": ".*",
+                "kind": "http",
+                "url": "http://example.com/notify/{event_name}/",
+                "data": {"foo": "{event_data['foo']}"},
+                "requests_kwargs": {"auth": ["myuser", "mypassword"]},
+            }
+        ])
+
+        responses.add(
+            responses.POST,
+            "http://example.com/notify/something_else/",
+        )
+
+        app.trigger('something_else', {"foo": "bar"})
+
+        request = responses.calls[0].request
+        assert json.loads(request.body) == {
+            "foo": "bar"
+        }
+        assert request.headers["Authorization"] == "Basic bXl1c2VyOm15cGFzc3dvcmQ="

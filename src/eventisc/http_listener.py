@@ -12,6 +12,9 @@ class HttpListener(Listener):
         self.url = url
         self.method = method
         self.requests_kwargs = requests_kwargs or {}
+        if "auth" in self.requests_kwargs:
+            # Fix: auth parameter must be tuple and if read from yaml is list
+            self.requests_kwargs["auth"] = tuple(self.requests_kwargs["auth"])
         self.query_kwargs = query_kwargs
         self.data = data
         self.request_format = request_format

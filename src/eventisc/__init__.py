@@ -2,6 +2,7 @@
 __version__ = "0.0.1"
 
 import logging
+import importlib
 import re
 import json
 from abc import ABC, abstractmethod
@@ -60,6 +61,12 @@ class Listener(ABC):
 
     @classmethod
     def get(cls, kind):
+        if kind not in cls._registry:
+            # Try import listener module
+            try:
+                importlib.import_module(f"eventisc.{kind}_listener")
+            except ImportError:
+                pass
         return cls._registry[kind]
 
     @classmethod
@@ -88,11 +95,18 @@ class Listener(ABC):
         if self.filter and not self.filter(event_name, event_data):
             return False
 
-        return self._do_notify(event_name, event_data)
+        if env.bool("EVENTISC_DRYRUN"):
+            return self._do_notify_dryrun(event_name, event_data)
+        else:
+            return self._do_notify(event_name, event_data)
 
     @abstractmethod
     def _do_notify(self, event_name, event_data):
         raise NotImplementedError
+
+    def _do_notify_dryrun(self, event_name, event_data):
+        logger.info("EVENTISC_DRYRUN=Y _do_notify(%s, %s)", event_name, event_data)
+        return True
 
     @classmethod
     def format(self, value, event_name, event_data, **kwargs):
