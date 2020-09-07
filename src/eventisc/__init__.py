@@ -95,11 +95,11 @@ class Listener(ABC):
         raise NotImplementedError
 
     @classmethod
-    def format(self, value, event_name, event_data):
+    def format(self, value, event_name, event_data, **kwargs):
         """Formats a field that can be constant, proxy or format string of the event values"""
         if not isinstance(value, str) or '{' not in value:
             return value
-        context_dict = dict(event_name=event_name, event_data=event_data)
+        context_dict = dict(event_name=event_name, event_data=event_data, **kwargs)
         if value.startswith("{") and value.endswith("}") and '{' not in value[1:-1]:
             # It's a simple value, {variable}, use eval to keep type
             try:

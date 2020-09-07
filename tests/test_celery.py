@@ -3,13 +3,10 @@ from unittest import TestCase
 import eventisc
 import eventisc.celery_listener
 
-try:
-    from unittest import mock
-except ImportError:
-    import mock
+from unittest import mock
 
 
-class TestEventApp(TestCase):
+class TestCeleryListener(TestCase):
     def tearDown(self):
         eventisc.default_app = None
 

@@ -4,10 +4,7 @@ import tempfile
 from unittest import TestCase
 import eventisc
 
-try:
-    from unittest import mock
-except ImportError:
-    import mock
+from unittest import mock
 
 
 class MyTestListener(eventisc.Listener):
