@@ -76,14 +76,16 @@ class TestEventApp(TestCase):
         app.listeners[0].mock.assert_not_called()
         app.listeners[1].mock.assert_called_once_with("envname.bar_created", {"bar_name": "Moe's"})
 
-    def test_init_from_json(self):
-        config = """{"name_prefix": "jsonapp.",
-            "listeners": [{"kind": "test", "event_name": "jsonapp.myevent", "foo": 33}]
-        }"""
+    def _make_temp_file(self, content, suffix=".yaml"):
+        ret = tempfile.NamedTemporaryFile(suffix=suffix, mode="wt")
+        ret.write(content)
+        ret.flush()
+        return ret
 
-        config_file = tempfile.NamedTemporaryFile(suffix=".json", mode="wt")
-        config_file.write(config)
-        config_file.flush()
+    def test_init_from_json(self):
+        config_file = self._make_temp_file("""{"name_prefix": "jsonapp.",
+            "listeners": [{"kind": "test", "event_name": "jsonapp.myevent", "foo": 33}]
+        }""", suffix=".json")
 
         with mock.patch.dict(os.environ, {"EVENTISC_CONFIG": config_file.name}):
             app = eventisc.get_current_app()
@@ -92,20 +94,30 @@ class TestEventApp(TestCase):
             assert app.listeners[0].foo == 33
 
     def test_init_from_yaml(self):
-        config = """name_prefix: yamlapp.
+        config_file = self._make_temp_file("""name_prefix: yamlapp.
 listeners:
  - kind: test
    event_name: jsonapp.myevent
    foo: 666
-"""
-
-        config_file = tempfile.NamedTemporaryFile(suffix=".yaml", mode="wt")
-        config_file.write(config)
-        config_file.flush()
+""")
 
         with mock.patch.dict(os.environ, {"EVENTISC_CONFIG": config_file.name}):
             app = eventisc.get_current_app()
             assert app.name_prefix == "yamlapp."
+            assert len(app.listeners) == 1
+            assert app.listeners[0].foo == 666
+
+    def test_init_from_yaml_and_nameprefix(self):
+        config_file = self._make_temp_file("""listeners:
+ - kind: test
+   event_name: jsonapp.myevent
+   foo: 666
+""")
+
+        with mock.patch.dict(os.environ, {"EVENTISC_CONFIG": config_file.name,
+                                          "EVENTISC_NAME_PREFIX": "envapp."}):
+            app = eventisc.get_current_app()
+            assert app.name_prefix == "envapp."
             assert len(app.listeners) == 1
             assert app.listeners[0].foo == 666
 

@@ -95,7 +95,7 @@ class Listener(ABC):
         if self.filter and not self.filter(event_name, event_data):
             return False
 
-        if env.bool("EVENTISC_DRYRUN"):
+        if env.bool("EVENTISC_DRYRUN", False):
             return self._do_notify_dryrun(event_name, event_data)
         else:
             return self._do_notify(event_name, event_data)
@@ -187,6 +187,8 @@ def init_default_app(name_prefix=None, listeners=None, config_file=None):
             listeners = []
         else:
             name_prefix, listeners = read_config_file(config_file)
+            if name_prefix is None:
+                name_prefix = env.str("EVENTISC_NAME_PREFIX", "")
     elif name_prefix is None and config_file is None:
         name_prefix = env.str("EVENTISC_NAME_PREFIX", "")
 
