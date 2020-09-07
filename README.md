@@ -4,6 +4,8 @@ This library handles inter (micro)services communication in a decoupled way usin
 
 The code raises an event when something happens and that event fires notifications to the registered listeners.
 
+**THIS IS A PYTHON 2.7 COMPATIBLE PACKAGE, FOR PYTHON 3 USE https://pypi.org/project/event-isc/**
+
 Implemented notifications are:
 
 1. Celery task
@@ -14,9 +16,7 @@ Implemented notifications are:
 
 Can be configured with a yaml file like this, passed as initialization argument or in environment variable EVENTISC_CONFIG
 
-
 ```yaml
-
 name_prefix: myapp.
 listeners:
 - kind: http
@@ -50,4 +50,3 @@ eventisc.trigger("user_created", {"user": user})  # Should fire both listeners
 eventisc.trigger("foo_created", {"foo": "bar"})  # Should fire only celery
 
 ```
-

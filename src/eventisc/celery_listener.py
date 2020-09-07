@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from . import Listener
 from celery import current_app
 
@@ -7,7 +8,7 @@ class CeleryListener(Listener):
 
     def __init__(self, event_name, queue, task_name, task_args=None, task_kwargs=None,
                  send_task_kargs={}, filter=None):
-        super().__init__(event_name, filter)
+        super(CeleryListener, self).__init__(event_name, filter)
         self.queue = queue
         self.task_name = task_name
         if task_args is None and task_kwargs is None:
@@ -39,3 +40,6 @@ class CeleryListener(Listener):
             queue=queue,
             **self.send_task_kargs
         )
+
+
+CeleryListener.register()

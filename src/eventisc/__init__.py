@@ -5,7 +5,7 @@ import logging
 import importlib
 import re
 import json
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from environs import Env
 
 try:
@@ -51,11 +51,13 @@ class EventApp:
         return count
 
 
-class Listener(ABC):
+class Listener(object):
+    __metaclass__ = ABCMeta
+
     _registry = {}
 
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
+    @classmethod
+    def register(cls):
         if hasattr(cls, "kind"):
             Listener._registry[cls.kind] = cls
 
@@ -64,7 +66,7 @@ class Listener(ABC):
         if kind not in cls._registry:
             # Try import listener module
             try:
-                importlib.import_module(f"eventisc.{kind}_listener")
+                importlib.import_module("eventisc.{}_listener".format(kind))
             except ImportError:
                 pass
         return cls._registry[kind]
@@ -95,7 +97,7 @@ class Listener(ABC):
         if self.filter and not self.filter(event_name, event_data):
             return False
 
-        if env.bool("EVENTISC_DRYRUN"):
+        if env.bool("EVENTISC_DRYRUN", False):
             return self._do_notify_dryrun(event_name, event_data)
         else:
             return self._do_notify(event_name, event_data)
@@ -124,11 +126,13 @@ class Listener(ABC):
         return value.format(**context_dict)
 
 
-class Filter(ABC):
+class Filter(object):
+    __metaclass__ = ABCMeta
+
     _registry = {}
 
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
+    @classmethod
+    def register(cls):
         if hasattr(cls, "kind"):
             Filter._registry[cls.kind] = cls
 
@@ -156,6 +160,9 @@ class ExprFilter(Filter):
 
     def __call__(self, event_name, event_data):
         return bool(eval(self.expr, eval_globals(), {"event_name": event_name, "event_data": event_data}))
+
+
+ExprFilter.register()
 
 
 def read_config_file(config_file):

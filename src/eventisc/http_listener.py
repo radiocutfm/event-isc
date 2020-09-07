@@ -1,4 +1,5 @@
-from urllib.parse import urlencode
+from __future__ import absolute_import
+from urllib import urlencode
 import requests
 from . import Listener
 
@@ -8,7 +9,7 @@ class HttpListener(Listener):
 
     def __init__(self, event_name, url, method="post", query_kwargs=None, data=None,
                  requests_kwargs=None, request_format="json", filter=None):
-        super().__init__(event_name, filter)
+        super(HttpListener, self).__init__(event_name, filter)
         self.url = url
         self.method = method
         self.requests_kwargs = requests_kwargs or {}
@@ -45,3 +46,6 @@ class HttpListener(Listener):
         resp.raise_for_status()
 
         return True
+
+
+HttpListener.register()

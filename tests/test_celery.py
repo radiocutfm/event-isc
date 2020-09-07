@@ -3,7 +3,7 @@ from unittest import TestCase
 import eventisc
 import eventisc.celery_listener
 
-from unittest import mock
+import mock
 
 
 class TestCeleryListener(TestCase):

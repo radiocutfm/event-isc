@@ -4,19 +4,22 @@ import tempfile
 from unittest import TestCase
 import eventisc
 
-from unittest import mock
+import mock
 
 
 class MyTestListener(eventisc.Listener):
     kind = "test"
 
     def __init__(self, event_name, filter=None, foo=None):
-        super().__init__(event_name, filter)
+        super(MyTestListener, self).__init__(event_name, filter)
         self.foo = foo
         self.mock = mock.MagicMock()
 
     def _do_notify(self, event_name, event_data):
         return self.mock(event_name, event_data)
+
+
+MyTestListener.register()
 
 
 class TestEventApp(TestCase):
@@ -130,7 +133,7 @@ listeners:
         assert count == 0
         app.listeners[0].mock.assert_not_called()
 
-    @mock.patch.dict(os.environ, {"EVENTISC_DRYRUN": "Y"})
+    @mock.patch.dict(os.environ, {"EVENTISC_DRYRUN": "1"})
     def test_dry_run(self):
         eventisc.init_default_app(listeners=[
             {"kind": "test", "event_name": "myevent", "foo": 23},
