@@ -1,5 +1,10 @@
+import logging
 from . import Listener
+from environs import Env
 from celery import current_app
+
+env = Env()
+logger = logging.getLogger()
 
 
 class CeleryListener(Listener):
@@ -33,9 +38,21 @@ class CeleryListener(Listener):
         else:
             kwargs = dict((k, self.format(v, event_name, event_data))
                           for (k, v) in self.task_kwargs.items())
-        current_app.send_task(
+        self.send_task(
             task_name,
             args=args, kwargs=kwargs,
             queue=queue,
             **self.send_task_kargs
         )
+        return True
+
+    def _do_notify_dryrun(self, event_name, event_data):
+        logger.info("EVENTISC_DRYRUN=Y _do_notify(%s, %s)", event_name, event_data)
+        return self._do_notify(event_name, event_data)  # send_task supports EVENTISC_DRYRUN
+
+    @classmethod
+    def send_task(cls, *args, **kwargs):
+        if env.bool("EVENTISC_DRYRUN", False):
+            logger.info("send_task(args={}, kwargs={}".format(args, kwargs))
+        else:
+            return current_app.send_task(*args, **kwargs)
