@@ -17,16 +17,21 @@ class TestRabbitListenerApp(TestCase):
                 "event_name_regex": ".*",
                 "kind": "rabbit",
                 "url": "http://rabbit:5672/end",
-                "queue_kwargs": {"exchange": "some-exchange", "routing_key": "some-queue"}
+                "queue_kwargs": {"exchange": "some-exchange", "routing_key": "some-queue"},
+                "data": {
+                    "topic": "{event_data['topic']}",
+                    "action": "{event_data['action']}",
+                    "id": "{event_data['id']}"
+                }
             }
         ])
 
-        channel_mock = pika_mock.channel
+        channel_mock = app.listeners[0].channel
 
-        app.trigger('client_created', {"id": 14})
+        app.trigger('client_created', {"id": 14, "topic": "client", "action": "created"})
 
         channel_mock.basic_publish.assert_called_once_with(
             exchange='some-exchange',
             routing_key='some-queue',
-            body="{'topic': 'client', 'action': 'created', id: 14}"
+            body='{"topic": "client", "action": "created", "id": 14}'
         )
