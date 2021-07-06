@@ -91,8 +91,9 @@ setup(
     extras_require={  # Optional
         'requests': ['requests'],
         'celery': ['celery'],
-        'dev': ['check-manifest', 'responses', 'celery', 'requests'],
-        'test': ['coverage', 'responses', 'celery', 'requests'],
+        'pika': ['pika'],
+        'dev': ['check-manifest', 'responses', 'celery', 'requests', 'pika'],
+        'test': ['coverage', 'responses', 'celery', 'requests', 'pika'],
     },
 
     # List additional URLs that are relevant to your project as a dict.
