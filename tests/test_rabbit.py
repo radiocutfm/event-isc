@@ -34,7 +34,7 @@ class TestRabbitListenerApp(TestCase):
     def test_rabbit_listener(self, pika_mock):
         app = eventisc.init_default_app(listeners=[self._default_rabbit_config()])
 
-        channel_mock = eventisc.rabbit_listener.local.channel
+        channel_mock = app.listeners[0].local.channel
 
         app.trigger('client_created', {"id": 14, "topic": "client", "action": "created"})
 
@@ -46,9 +46,9 @@ class TestRabbitListenerApp(TestCase):
 
     @mock.patch.object(eventisc.rabbit_listener, "pika")
     def test_pika_connection(self, pika_mock):
-        eventisc.init_default_app(listeners=[self._default_rabbit_config()])
+        app = eventisc.init_default_app(listeners=[self._default_rabbit_config()])
 
-        channel_mock = eventisc.rabbit_listener.local.channel
+        channel_mock = app.listeners[0].local.channel
 
         channel_mock.queue_declare.assert_called_once_with(queue="some-queue")
 
