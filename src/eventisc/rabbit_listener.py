@@ -61,3 +61,6 @@ class RabbitListener(Listener):
             data = None
         data["body"] = json.dumps(event_data)
         self.get_channel().basic_publish(**data)
+
+
+RabbitListener.register()
