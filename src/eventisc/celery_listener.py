@@ -58,4 +58,5 @@ class CeleryListener(Listener):
         else:
             return current_app.send_task(*args, **kwargs)
 
+
 CeleryListener.register()

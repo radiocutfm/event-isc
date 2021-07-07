@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from unittest import TestCase
-from unittest import mock
+import mock
+import json
 
 import eventisc
 import eventisc.rabbit_listener
@@ -36,13 +37,19 @@ class TestRabbitListenerApp(TestCase):
 
         channel_mock = app.listeners[0].local.channel
 
-        app.trigger('client_created', {"id": 14, "topic": "client", "action": "created"})
+        msg_body = {"id": 14, "topic": "client", "action": "created"}
+
+        app.trigger('client_created', msg_body)
 
         channel_mock.basic_publish.assert_called_once_with(
             exchange='some-exchange',
             routing_key='some-queue',
-            body='{"id": 14, "topic": "client", "action": "created"}'
+            body=mock.ANY
         )
+
+        # Load body message to avoid comparing dumped JSON
+        _, call_kwargs = channel_mock.basic_publish.call_args
+        assert json.loads(call_kwargs["body"]) == msg_body
 
     @mock.patch.object(eventisc.rabbit_listener, "pika")
     def test_pika_connection(self, pika_mock):
