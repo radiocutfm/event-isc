@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 import logging
 import importlib
@@ -194,6 +194,8 @@ def init_default_app(name_prefix=None, listeners=None, config_file=None):
             listeners = []
         else:
             name_prefix, listeners = read_config_file(config_file)
+            if name_prefix is None:
+                name_prefix = env.str("EVENTISC_NAME_PREFIX", "")
     elif name_prefix is None and config_file is None:
         name_prefix = env.str("EVENTISC_NAME_PREFIX", "")
 
