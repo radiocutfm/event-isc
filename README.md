@@ -8,6 +8,7 @@ Implemented notifications are:
 
 1. Celery task
 2. HTTP request
+3. RabbitMQ Message
 
 
 ## YAML file configuration
@@ -51,3 +52,44 @@ eventisc.trigger("foo_created", {"foo": "bar"})  # Should fire only celery
 
 ```
 
+
+## RabbitMQ / Pika special behaviour
+
+Pika does not support multithreading, pika-pool is used to have thread-safety but still have long-lived persistent
+connections.
+
+You should periodically call `eventisc.heartbeat` if you're planning on supporting rabbit listeners. This ensures
+server heartbeats are handled and reduces connection churn:
+
+```python
+import threading
+
+def heartbeat_thread():
+    while True:
+        time.sleep(60)  # 60 is pika's default as of 1.2.0
+        app.heartbeat()
+
+
+t = threading.Thread(target=heartbeat_thread, daemon=True)
+t.start()
+```
+
+Alternatively, users can avoid connection lost errors by setting the `stale` parameter lower than the heartbeat
+timeout:
+
+```yaml
+listeners:
+  - kind: rabbit
+    event_name_regex: .*
+    url: "amqp://localhost:5672/?heartbeat=90"  # heartbeat timeout set to 90 secs
+    queue_kwargs:
+      queue:
+        queue: myqueue
+    publish_kwargs:
+      exchange: ""
+      routing_key: "{queue_kwargs['queue']['queue']}"
+    stale: 60
+```
+
+This will *not* avoid connection churn, but it should reduce the chances of getting a connection error when sending a
+message.

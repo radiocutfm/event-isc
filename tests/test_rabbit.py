@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import re
 from unittest import TestCase
 from unittest import mock
 
@@ -7,57 +8,51 @@ import eventisc.rabbit_listener
 
 
 class TestRabbitListenerApp(TestCase):
-    def tearDown(self):
-        eventisc.default_app = None
+    @mock.patch("eventisc.rabbit_listener.pika.BlockingConnection", autospec=True)
+    def test_message_publish(self, pika_mock):
+        listener = eventisc.rabbit_listener.RabbitListener(
+            event_name=re.compile(".*"),
+            url="amqp://rabbit:5672",
+            publish_kwargs={"exchange": "", "routing_key": "testrun"},
+            queue_kwargs={"queue": "testrun"},
+            declare=False,
+        )
 
-    def _default_rabbit_config(self):
-        return {
-            "event_name_regex": ".*",
-            "kind": "rabbit",
-            "url": "http://rabbit:5672/end",
-            "queue_kwargs": {
-                "exchange": {
-                    "exchange": "some-exchange",
-                    "exchange_type": "direct"
-                },
-                "queue": {
-                    "queue": "some-queue"
-                }
+        with listener.pool.acquire() as conn:
+            channel = conn.channel
+
+        listener.notify("test_event", {"some": "data"})
+
+        channel.basic_publish.assert_called_once_with(
+            body='{"some": "data"}',
+            exchange="",
+            routing_key="testrun",
+        )
+
+    @mock.patch("eventisc.rabbit_listener.pika.BlockingConnection", autospec=True)
+    def test_declare_queue_and_exchange(self, pika_mock):
+        listener = eventisc.rabbit_listener.RabbitListener(
+            event_name=re.compile(".*"),
+            url="amqp://rabbit:5672",
+            publish_kwargs={"exchange": "", "routing_key": "testrun"},
+            queue_kwargs={
+                "exchange": {"exchange": "some-exchange", "exchange_type": "direct"},
+                "queue": {"queue": "some-queue"},
             },
-            "publish_kwargs": {
-                "exchange": "{queue_kwargs['exchange']['exchange']}",
-                "routing_key": "{queue_kwargs['queue']['queue']}"
-            }
-        }
-
-    @mock.patch.object(eventisc.rabbit_listener, "pika")
-    def test_rabbit_listener(self, pika_mock):
-        app = eventisc.init_default_app(listeners=[self._default_rabbit_config()])
-
-        channel_mock = app.listeners[0].local.channel
-
-        app.trigger('client_created', {"id": 14, "topic": "client", "action": "created"})
-
-        channel_mock.basic_publish.assert_called_once_with(
-            exchange='some-exchange',
-            routing_key='some-queue',
-            body='{"id": 14, "topic": "client", "action": "created"}'
+            declare=False,
         )
 
-    @mock.patch.object(eventisc.rabbit_listener, "pika")
-    def test_pika_connection(self, pika_mock):
-        app = eventisc.init_default_app(listeners=[self._default_rabbit_config()])
+        with listener.pool.acquire() as conn:
+            channel = conn.channel
 
-        channel_mock = app.listeners[0].local.channel
+        listener.declare_queue_and_exchange()
 
-        channel_mock.queue_declare.assert_called_once_with(queue="some-queue")
+        channel.queue_declare.assert_called_once_with(queue="some-queue")
 
-        channel_mock.exchange_declare.assert_called_once_with(
-            exchange="some-exchange",
-            exchange_type="direct"
+        channel.exchange_declare.assert_called_once_with(
+            exchange="some-exchange", exchange_type="direct"
         )
 
-        channel_mock.queue_bind.assert_called_once_with(
-            exchange="some-exchange",
-            queue="some-queue"
+        channel.queue_bind.assert_called_once_with(
+            exchange="some-exchange", queue="some-queue"
         )
