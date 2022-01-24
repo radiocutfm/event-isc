@@ -50,6 +50,13 @@ class EventApp:
                 count += 1
         return count
 
+    def heartbeat(self):
+        for lis in self.listeners:
+            try:
+                lis.heartbeat()
+            except AttributeError:
+                pass
+
 
 class Listener(object):
     __metaclass__ = ABCMeta
@@ -220,3 +227,7 @@ def get_current_app():
 
 def trigger(event_name, event_data):
     return get_current_app().trigger(event_name, event_data)
+
+
+def heartbeat():
+    return get_current_app().heartbeat()
