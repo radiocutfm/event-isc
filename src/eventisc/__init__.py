@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 import logging
 import importlib
@@ -49,6 +49,13 @@ class EventApp:
             if sent:
                 count += 1
         return count
+
+    def heartbeat(self):
+        for lis in self.listeners:
+            try:
+                lis.heartbeat()
+            except AttributeError:
+                pass
 
 
 class Listener(object):
@@ -220,3 +227,7 @@ def get_current_app():
 
 def trigger(event_name, event_data):
     return get_current_app().trigger(event_name, event_data)
+
+
+def heartbeat():
+    return get_current_app().heartbeat()

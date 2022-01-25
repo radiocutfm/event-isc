@@ -91,9 +91,19 @@ setup(
     extras_require={  # Optional
         'requests': ['requests'],
         'celery': ['celery'],
-        'pika': ['pika'],
+        'pika': [
+            'pika',
+            'pika-pool @ git+https://github.com/radiocutfm/pika-pool.git@20220124#egg=pika_pool',
+        ],
         'dev': ['check-manifest', 'responses', 'celery', 'requests', 'pika'],
-        'test': ['coverage', 'responses', 'celery', 'requests', 'pika'],
+        'test': [
+            'coverage',
+            'responses',
+            'celery',
+            'requests',
+            'pika',
+            'pika-pool @ git+https://github.com/radiocutfm/pika-pool.git@20220124#egg=pika_pool'
+        ],
     },
 
     # List additional URLs that are relevant to your project as a dict.
