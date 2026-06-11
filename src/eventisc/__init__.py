@@ -30,8 +30,9 @@ def eval_globals():
 
 class EventApp:
 
-    def __init__(self, name_prefix="", listeners=None):
+    def __init__(self, name_prefix="", listeners=None, notification_logging=None):
         self.name_prefix = name_prefix or ""
+        self.notification_logging = notification_logging or {}
         listeners = listeners or []
         self.listeners = []
         [self.add_listener(lis) for lis in listeners]
@@ -39,6 +40,7 @@ class EventApp:
     def add_listener(self, listener):
         if not isinstance(listener, Listener):
             listener = Listener.from_dict(listener)
+        listener.set_notification_logging(self.notification_logging)
         self.listeners.append(listener)
 
     def trigger(self, event_name, event_data):
@@ -108,6 +110,9 @@ class Listener(ABC):
         logger.info("EVENTISC_DRYRUN=Y _do_notify(%s, %s)", event_name, event_data)
         return True
 
+    def set_notification_logging(self, config):
+        self.notification_logging = config or {}
+
     @classmethod
     def format(self, value, event_name, event_data, **kwargs):
         """Formats a field that can be constant, proxy or format string of the event values"""
@@ -174,10 +179,14 @@ def read_config_file(config_file):
     elif format == "yaml":
         config = yaml.safe_load(config_file)
 
-    return config.get("name_prefix", None), config.get("listeners", [])
+    return (
+        config.get("name_prefix", None),
+        config.get("listeners", []),
+        config.get("notification_logging", None),
+    )
 
 
-def init_default_app(name_prefix=None, listeners=None, config_file=None):
+def init_default_app(name_prefix=None, listeners=None, config_file=None, notification_logging=None):
     global default_app
     if name_prefix is None and listeners is None and config_file is None:
         # Try reading from env
@@ -186,21 +195,33 @@ def init_default_app(name_prefix=None, listeners=None, config_file=None):
             name_prefix = env.str("EVENTISC_NAME_PREFIX", "")
             listeners = []
         else:
-            name_prefix, listeners = read_config_file(config_file)
+            name_prefix, listeners, config_notification_logging = read_config_file(config_file)
+            if notification_logging is None:
+                notification_logging = config_notification_logging
             if name_prefix is None:
                 name_prefix = env.str("EVENTISC_NAME_PREFIX", "")
     elif name_prefix is None and config_file is None:
         name_prefix = env.str("EVENTISC_NAME_PREFIX", "")
+    elif config_file is not None:
+        config_name_prefix, config_listeners, config_notification_logging = read_config_file(config_file)
+        if name_prefix is None:
+            name_prefix = config_name_prefix
+        if listeners is None:
+            listeners = config_listeners
+        if notification_logging is None:
+            notification_logging = config_notification_logging
 
-    default_app = create_app(name_prefix, listeners)
+    default_app = create_app(name_prefix, listeners, notification_logging=notification_logging)
     return default_app
 
 
-def create_app(name_prefix=None, listeners=None, config_file=None):
+def create_app(name_prefix=None, listeners=None, config_file=None, notification_logging=None):
     if config_file is not None:
-        name_prefix, listeners = read_config_file(config_file)
+        name_prefix, listeners, config_notification_logging = read_config_file(config_file)
+        if notification_logging is None:
+            notification_logging = config_notification_logging
 
-    return EventApp(name_prefix, listeners)
+    return EventApp(name_prefix, listeners, notification_logging=notification_logging)
 
 
 def get_current_app():
