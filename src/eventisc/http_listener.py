@@ -1,6 +1,10 @@
 from urllib.parse import urlencode
+import logging
 import requests
 from . import Listener
+
+
+logger = logging.getLogger(__name__)
 
 
 class HttpListener(Listener):
@@ -18,6 +22,23 @@ class HttpListener(Listener):
         self.query_kwargs = query_kwargs
         self.data = data
         self.request_format = request_format
+        self.notification_logging = {}
+
+    def _log_response(self, event_name, url, resp):
+        if not self.notification_logging.get("enabled", False):
+            return
+
+        body = None
+        if self.notification_logging.get("log_response_body", True):
+            max_body_length = self.notification_logging.get("max_body_length", 2000)
+            body = resp.text[:max_body_length]
+            if len(resp.text) > max_body_length:
+                body += "..."
+
+        logger.info(
+            "eventisc notification response event=%s method=%s url=%s status=%s body=%r",
+            event_name, self.method.upper(), url, resp.status_code, body
+        )
 
     def _do_notify(self, event_name, event_data):
         if self.query_kwargs:
@@ -42,6 +63,10 @@ class HttpListener(Listener):
         else:
             resp = request_method(url, data=data, **self.requests_kwargs)
 
+        self._log_response(event_name, url, resp)
         resp.raise_for_status()
 
         return True
+
+    def set_notification_logging(self, config):
+        self.notification_logging = config or {}
